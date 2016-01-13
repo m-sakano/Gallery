@@ -110,7 +110,6 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
   </head>
 
   <body>
-
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
@@ -122,6 +121,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
           </button>
           <a class="navbar-brand" href="#"><?php echo BRAND; ?></a>
         </div>
+        <div class="collapse navbar-collapse" id="navbar">
 		<form class="navbar-form navbar-left" role="search" action="./" method="GET">
 		  <div class="form-group">
 		    <label style="color: #999;">PAGE</label>
@@ -134,6 +134,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 		<ul class="nav navbar-nav navbar-right">
           <li><a href="logout">ログアウト</a></li>
         </ul>
+        </div>
       </div>
     </nav>
 
