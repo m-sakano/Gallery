@@ -13,6 +13,9 @@ if ($_GET['prefix']!='') {
 } else {
 	$_SESSION['prefix'] = DEFAULT_PREFIX;
 }
+if (mb_substr($_SESSION['prefix'],-1)!=='/') {
+	$_SESSION['prefix'] .= '/';
+}
 
 if ($_GET['picsnum']!='') {
 	$_SESSION['picsnum'] = $_GET['picsnum'];
@@ -199,15 +202,25 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
           </a>
         <?php }} ?>
         </div><!-- lightGallery -->
-		<?php
-		/*
-		foreach($objects as $object) {
-			$pos = mb_strpos(mb_substr($object['Key'],mb_strlen($_SESSION['prefix'])),'/');
-			if( $pos > 0 ) {
-				echo $pos.' '.mb_substr($object['Key'],mb_strlen($object['Key'])-mb_strlen($_SESSION['prefix'])-$pos).'<br>';
+		<?php // show subdirs
+		$pages = array();
+		foreach ($objects as $object) {
+			$pos = mb_strpos($object['Key'],'/',mb_strlen($_SESSION['prefix']));
+			if ($pos>0) {
+				$page = mb_substr($object['Key'],0,$pos+1);
+				if ($pages[count($pages)-1] !== $page) {
+					array_push($pages,$page);
+				}
 			}
 		}
-		*/
+		if (count($pages)>0) {
+			echo '<div>';
+			echo 'SUB PAGES: ';
+			foreach ($pages as $page) {
+				echo '<a href="./?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a>&nbsp;';
+			}
+			echo '</div>';
+		}
 		?>
       <!-- </div> starter-template -->
     </div><!-- /.container -->
