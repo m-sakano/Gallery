@@ -3,6 +3,10 @@ require_once('config.php');
 require_once('createS3Client.php');
 session_start();
 
+if (!isset($_SESSION['me'])) {
+	header('Location: '.SITE_URL);
+}
+
 $width = THUMBS_WIDTH;
 if ($_GET['prefix']!='') {
 	$_SESSION['prefix'] = $_GET['prefix'];
