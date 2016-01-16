@@ -45,7 +45,11 @@ foreach ($objects as $object) {
 		$max_pics++;
 	}
 }
-$page_max = ceil($max_pics / $_SESSION['picsnum']);
+if ($_SESSION['picsnum']==0) {
+	$page_max = 0;
+} else {
+	$page_max = ceil($max_pics / $_SESSION['picsnum']);
+}
 $page_first_pict = ($_SESSION['page'] - 1) * $_SESSION['picsnum'] + 1;
 $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 ?>
@@ -97,6 +101,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     <script src="lightGallery/dist/js/lg-fullscreen.min.js"></script>
     <script src="lightGallery/dist/js/lg-autoplay.min.js"></script>
     <script src="lightGallery/dist/js/lg-zoom.min.js"></script>
+    <script src="lightGallery/dist/js/lg-video.min.js"></script>
     
     <script type="text/javascript">
 	    $(document).ready(function() {
@@ -190,7 +195,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
         $i = 0;
         foreach ($objects as $object) {
         	if(mb_substr($object['Key'],-1)=='/') continue;
-        	if(array_search(mb_strtolower(mb_substr($object['Key'],-3,3)),array('jpg','png','gif'))===false) continue;
+        	if(array_search(mb_strtolower(mb_substr($object['Key'],-3,3)),array('jpg','png','gif','mp4'))===false) continue;
         	$i++;
         	if ($i>=$page_first_pict && $i<=$page_last_pict) {
 		        $command = $client->getCommand('GetObject', array(
@@ -200,21 +205,28 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 				// Generate Signed URL
 				$signedUrl = $command->createPresignedUrl('+1 hours');
 				// Generate Thumbnail
-				if ($client->doesObjectExist(S3_BUCKET,'thumbs/'.$object['Key'])==false) {
-					$thumbnail = new Imagick();
-					$image = $client->getObject(array('Bucket'=>S3_BUCKET,'Key'=>$object['Key']));
-					$thumbnail->readImageBlob($image['Body']);
-					$thumbnail->resizeImage(THUMBS_WIDTH ,0 , imagick::FILTER_UNDEFINED, 1.0);
-					$command = $client->putObject(array(
-						'Bucket' => S3_BUCKET,
-						'Key' => 'thumbs/'.$object['Key'],
-						'Body' => $thumbnail
+				if (mb_strtolower(mb_substr($object['Key'],-3,3))=='mp4') {
+					$command = $client->getCommand('GetObject', array(
+				    	'Bucket' => S3_BUCKET,
+				    	'Key' => 'thumbs/movie.png'
+					));
+				} else { 
+					if ($client->doesObjectExist(S3_BUCKET,'thumbs/'.$object['Key'])==false) {
+						$thumbnail = new Imagick();
+						$image = $client->getObject(array('Bucket'=>S3_BUCKET,'Key'=>$object['Key']));
+						$thumbnail->readImageBlob($image['Body']);
+						$thumbnail->resizeImage(THUMBS_WIDTH ,0 , imagick::FILTER_UNDEFINED, 1.0);
+						$command = $client->putObject(array(
+							'Bucket' => S3_BUCKET,
+							'Key' => 'thumbs/'.$object['Key'],
+							'Body' => $thumbnail
+						));
+					}
+			        $command = $client->getCommand('GetObject', array(
+					    'Bucket' => S3_BUCKET,
+					    'Key' => 'thumbs/'.$object['Key']
 					));
 				}
-		        $command = $client->getCommand('GetObject', array(
-				    'Bucket' => S3_BUCKET,
-				    'Key' => 'thumbs/'.$object['Key']
-				));
 				// Generate Signed URL
 				$signedUrlThumbs = $command->createPresignedUrl('+1 hours');
 		?>
