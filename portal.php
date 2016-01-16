@@ -140,6 +140,26 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 
     <div class="container">
       <!-- <div class="starter-template"> -->
+		<?php // show subdirs
+		$pages = array();
+		foreach ($objects as $object) {
+			$pos = mb_strpos($object['Key'],'/',mb_strlen($_SESSION['prefix']));
+			if ($pos>0) {
+				$page = mb_substr($object['Key'],0,$pos+1);
+				if ($pages[count($pages)-1] !== $page) {
+					array_push($pages,$page);
+				}
+			}
+		}
+		if (count($pages)>0) {
+			echo '<div>';
+			echo 'SUB PAGES: ';
+			foreach ($pages as $page) {
+				echo '<a href="./?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a>&nbsp;';
+			}
+			echo '</div>';
+		}
+		?>
 		<nav align="center">
 		  <ul class="pagination">
 		    <?php $before=$_SESSION['page']-1; ?>
@@ -203,26 +223,6 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
           </a>
         <?php }} ?>
         </div><!-- lightGallery -->
-		<?php // show subdirs
-		$pages = array();
-		foreach ($objects as $object) {
-			$pos = mb_strpos($object['Key'],'/',mb_strlen($_SESSION['prefix']));
-			if ($pos>0) {
-				$page = mb_substr($object['Key'],0,$pos+1);
-				if ($pages[count($pages)-1] !== $page) {
-					array_push($pages,$page);
-				}
-			}
-		}
-		if (count($pages)>0) {
-			echo '<div>';
-			echo 'SUB PAGES: ';
-			foreach ($pages as $page) {
-				echo '<a href="./?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a>&nbsp;';
-			}
-			echo '</div>';
-		}
-		?>
       <!-- </div> starter-template -->
     </div><!-- /.container -->
 
