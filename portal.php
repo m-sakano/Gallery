@@ -119,7 +119,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#"><?php echo BRAND; ?></a>
+          <a class="navbar-brand" href="<?php echo SITE_URL; ?>"><?php echo BRAND; ?></a>
         </div>
         <div class="collapse navbar-collapse" id="navbar">
 		<form class="navbar-form navbar-left" role="search" action="./" method="GET">
