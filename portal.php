@@ -169,22 +169,22 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 		  <ul class="pagination">
 		    <?php $before=$_SESSION['page']-1; ?>
 		    <li<?php if($before<1){echo ' class="disabled"';} ?>>
-		      <a href="<?php echo './?prefix='.$_SESSION['prefix'].'&page='.$before;?>" aria-label="Previous">
+		      <a href="<?php echo './?prefix='.$_SESSION['prefix'].'&page='.$before.'&picsnum='.$_SESSION['picsnum'];?>" aria-label="Previous">
 		        <span aria-hidden="true">&laquo;</span>
 		      </a>
 		    </li>
 		    <?php 
 		    for ($i=1; $i<=$page_max; $i++) {
 		    	if ($i==$_SESSION['page']) {
-		    		echo '<li class="active"><a href="./?prefix='.$_SESSION['prefix'].'&page='.$i.'">'.$i.'</a></li>';
+		    		echo '<li class="active"><a href="./?prefix='.$_SESSION['prefix'].'&page='.$i.'&picsnum='.$_SESSION['picsnum'].'">'.$i.'</a></li>';
 		    	} else {
-		    		echo '<li><a href="./?prefix='.$_SESSION['prefix'].'&page='.$i.'">'.$i.'</a></li>';
+		    		echo '<li><a href="./?prefix='.$_SESSION['prefix'].'&page='.$i.'&picsnum='.$_SESSION['picsnum'].'">'.$i.'</a></li>';
 		    	}
 		    }
 		    ?>
 		    <?php $next=$_SESSION['page']+1; ?>
 		    <li<?php if($next>$page_max){echo ' class="disabled"';} ?>>
-		      <a href="<?php echo './?prefix='.$_SESSION['prefix'].'&page='.$next;?>" aria-label="Next">
+		      <a href="<?php echo './?prefix='.$_SESSION['prefix'].'&page='.$next.'&picsnum='.$_SESSION['picsnum'];?>" aria-label="Next">
 		        <span aria-hidden="true">&raquo;</span>
 		      </a>
 		    </li>
