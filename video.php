@@ -51,8 +51,8 @@ $max_pics = 0;
 if ($objects['Contents']!==NULL) {
     foreach ($objects['Contents'] as $key) {
     	if (mb_substr($key['Key'], -1) !== '/') {
-    	    if (array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('jpg','png','gif'))===false) continue;
-		    $max_pics++;
+    	    if (array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('mp4'))===false) continue;
+    	    $max_pics++;
     	}
     }
 }
@@ -106,7 +106,9 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     
     <!-- A jQuery plugin that adds cross-browser mouse wheel support. (Optional) -->
     <script src="js/jquery.mousewheel.min.js"></script>
-
+    
+<link href="http://vjs.zencdn.net/4.12/video-js.css" rel="stylesheet">
+<script src="http://vjs.zencdn.net/4.12/video.js"></script>
     <!-- lightgallery plugins -->
     <script src="lightGallery/dist/js/lightgallery.min.js"></script>
     <script src="lightGallery/dist/js/lg-thumbnail.min.js"></script>
@@ -117,8 +119,11 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     
     <script type="text/javascript">
 	    $(document).ready(function() {
-	        $("#lightgallery").lightGallery(); 
+            $('#video-gallery').lightGallery({
+                videojs: true
+            }); 
 	    });
+
 	</script>
 	
 	<style type="text/css">
@@ -139,7 +144,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
           <a class="navbar-brand" href="<?php echo SITE_URL; ?>"><?php echo BRAND; ?></a>
         </div>
         <div class="collapse navbar-collapse" id="navbar">
-		<form class="navbar-form navbar-left" role="search" action="./" method="GET">
+		<form class="navbar-form navbar-left" role="search" action="./video" method="GET">
 		  <div class="form-group">
 		    <label style="color: #999;">PAGE</label>
 		    <input type="text" class="form-control" placeholder="input prefix" name="prefix" value="<?php echo $_SESSION['prefix'];?>">
@@ -168,7 +173,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 			echo '<div>';
 			echo 'SUB PAGES: ';
 			foreach ($pages as $page) {
-				echo '<a href="./?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a>&nbsp;';
+				echo '<a href="./video?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a>&nbsp;';
 			}
 			echo '</div>';
 		}
@@ -177,22 +182,22 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 		  <ul class="pagination">
 		    <?php $before=$_SESSION['page']-1; ?>
 		    <li<?php if($before<1){echo ' class="disabled"';} ?>>
-		      <a href="<?php echo './?prefix='.$_SESSION['prefix'].'&page='.$before.'&picsnum='.$_SESSION['picsnum'];?>" aria-label="Previous">
+		      <a href="<?php echo './video?prefix='.$_SESSION['prefix'].'&page='.$before.'&picsnum='.$_SESSION['picsnum'];?>" aria-label="Previous">
 		        <span aria-hidden="true">&laquo;</span>
 		      </a>
 		    </li>
 		    <?php 
 		    for ($i=1; $i<=$page_max; $i++) {
 		    	if ($i==$_SESSION['page']) {
-		    		echo '<li class="active"><a href="./?prefix='.$_SESSION['prefix'].'&page='.$i.'&picsnum='.$_SESSION['picsnum'].'">'.$i.'</a></li>';
+		    		echo '<li class="active"><a href="./video?prefix='.$_SESSION['prefix'].'&page='.$i.'&picsnum='.$_SESSION['picsnum'].'">'.$i.'</a></li>';
 		    	} else {
-		    		echo '<li><a href="./?prefix='.$_SESSION['prefix'].'&page='.$i.'&picsnum='.$_SESSION['picsnum'].'">'.$i.'</a></li>';
+		    		echo '<li><a href="./video?prefix='.$_SESSION['prefix'].'&page='.$i.'&picsnum='.$_SESSION['picsnum'].'">'.$i.'</a></li>';
 		    	}
 		    }
 		    ?>
 		    <?php $next=$_SESSION['page']+1; ?>
 		    <li<?php if($next>$page_max){echo ' class="disabled"';} ?>>
-		      <a href="<?php echo './?prefix='.$_SESSION['prefix'].'&page='.$next.'&picsnum='.$_SESSION['picsnum'];?>" aria-label="Next">
+		      <a href="<?php echo './video?prefix='.$_SESSION['prefix'].'&page='.$next.'&picsnum='.$_SESSION['picsnum'];?>" aria-label="Next">
 		        <span aria-hidden="true">&raquo;</span>
 		      </a>
 		    </li>
@@ -204,7 +209,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
         if ($objects['Contents']!==NULL) {
             foreach ($objects['Contents'] as $key) {
             	if(mb_substr($key['Key'],-1)=='/') continue;
-            	if(array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('jpg','png','gif'))===false) continue;
+            	if(array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('mp4'))===false) continue;
             	$i++;
             	if ($i>=$page_first_pict && $i<=$page_last_pict) {
     		        $command = $client->getCommand('GetObject', array(
@@ -213,6 +218,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     				));
     				// Generate Signed URL
     				$signedUrl = $command->createPresignedUrl('+1 hours');
+    				/*
     				// Generate Thumbnail
     				if ($client->doesObjectExist(S3_BUCKET,'thumbs/'.$key['Key'])==false) {
     					$thumbnail = new Imagick();
@@ -229,13 +235,31 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     				    'Bucket' => S3_BUCKET,
     				    'Key' => 'thumbs/'.$key['Key']
     				));
+    				*/
+    		        $command = $client->getCommand('GetObject', array(
+    				    'Bucket' => S3_BUCKET,
+    				    'Key' => 'thumbs/movie.png'
+    				));
     				// Generate Signed URL
     				$signedUrlThumbs = $command->createPresignedUrl('+1 hours');
 		?>
-          <a href="<?php echo $signedUrl; ?>">
-            <img src="<?php echo $signedUrlThumbs; ?>" width="<?php echo $width ;?>" />
-          </a>
+          <div style="display:none;" id="video<?php echo $i;?>">
+            <video class="lg-video-object lg-html5 video-js vjs-default-skin" controls preload="none">
+              <source src="<?php echo $signedUrl; ?>" type="video/mp4">
+                 Your browser does not support HTML5 video.
+            </video>
+          </div>
         <?php }}} ?>
+          <ul id="video-gallery" style="list-style:none">
+          <?php
+          for ($j=1;$j<$i;$j++) {
+              if ($j>=$page_first_pict && $j<=$page_last_pict) {
+          ?>
+            <li data-poster="<?php echo $signedUrlThumbs; ?>" data-sub-html="<?php echo $key['Key'];?>" data-html="#video<?php echo $j;?>" style="float:left">
+              <img src="<?php echo $signedUrlThumbs; ?>" />
+            </li>
+          <?php }} ?>
+          </ul>
         </div><!-- lightGallery -->
       <!-- </div> starter-template -->
     </div><!-- /.container -->
