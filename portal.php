@@ -30,14 +30,8 @@ if ($_GET['page']!='') {
 }
 
 $client = createS3Client();
+$keylist = array();
 try {
-    /*
-    $objects = $client->getIterator('ListObjects', array(
-        'Bucket' => S3_BUCKET,
-        'Prefix' => $_SESSION['prefix'],
-        'Delimiter' => '/'
-    ));
-    */
     $objects = $client->ListObjects(array(
         'Bucket' => S3_BUCKET,
         'Prefix' => $_SESSION['prefix'],
@@ -46,12 +40,32 @@ try {
 } catch (S3Exception $e) {
     echo $e->getMessage() . "\n";
 }
+if ($objects['Contents']!==null) {
+    foreach ($objects['Contents'] as $key) {
+        array_push($keylist, $key['Key']);
+    }
+}
+while ($objects['IsTruncated']==true) {
+    try {
+        $objects = $client->ListObjects(array(
+            'Bucket' => S3_BUCKET,
+            'Prefix' => $_SESSION['prefix'],
+            'Delimiter' => '/',
+            'Marker' => $objects['NextMarker']
+        ));
+        foreach ($objects['Contents'] as $key) {
+            array_push($keylist, $key['Key']);
+        }
+    } catch (S3Exception $e) {
+        echo $e->getMessage() . "\n";
+    }
+}
 
 $max_pics = 0;
-if ($objects['Contents']!==NULL) {
-    foreach ($objects['Contents'] as $key) {
-    	if (mb_substr($key['Key'], -1) !== '/') {
-    	    if (array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('jpg','png','gif'))===false) continue;
+if (count($keylist)>0) {
+    foreach ($keylist as $key) {
+    	if (mb_substr($key, -1) !== '/') {
+    	    if (array_search(mb_strtolower(mb_substr($key,-3,3)),array('jpg','png','gif'))===false) continue;
 		    $max_pics++;
     	}
     }
@@ -157,22 +171,6 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 
     <div class="container">
       <!-- <div class="starter-template"> -->
-		<?php // show subdirs
-		$pages = array();
-		if ($objects['CommonPrefixes']!==NULL) {
-        	foreach ($objects['CommonPrefixes'] as $prefixes) {
-        		array_push($pages,$prefixes['Prefix']);
-        	}
-		}
-		if (count($pages)>0) {
-			echo '<div>';
-			echo 'SUB PAGES: ';
-			foreach ($pages as $page) {
-				echo '<a href="./?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a>&nbsp;';
-			}
-			echo '</div>';
-		}
-		?>
 		<nav align="center">
 		  <ul class="pagination">
 		    <?php $before=$_SESSION['page']-1; ?>
@@ -198,45 +196,65 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
 		    </li>
 		  </ul>
 		</nav>
+	  <div class="row">
+		<?php // show subdirs
+		$pages = array();
+		if ($objects['CommonPrefixes']!==NULL) {
+        	foreach ($objects['CommonPrefixes'] as $prefixes) {
+        		array_push($pages,$prefixes['Prefix']);
+        	}
+		}
+		if (count($pages)>0) {
+		    echo '<h3>SUB PAGES</h3>';
+		    echo '<div class="col-sm-3">';
+			foreach ($pages as $page) {
+				echo '<a href="./?prefix='.$page.'">'.mb_substr($page,mb_strlen($_SESSION['prefix'])).'</a><br>';
+			}
+		    echo '</div><!-- col-sm-3 -->';
+		    echo '<div class="col-sm-9>';
+		} else {
+		    echo '<div class="col-sm-12">';
+		}
+		?>
         <div id="lightgallery">
         <?php
         $i = 0;
-        if ($objects['Contents']!==NULL) {
-            foreach ($objects['Contents'] as $key) {
-            	if(mb_substr($key['Key'],-1)=='/') continue;
-            	if(array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('jpg','png','gif'))===false) continue;
+        if (count($keylist)>0) {
+            foreach ($keylist as $key) {
+            	if(mb_substr($key,-1)=='/') continue;
+            	if(array_search(mb_strtolower(mb_substr($key,-3,3)),array('jpg','png','gif'))===false) continue;
             	$i++;
             	if ($i>=$page_first_pict && $i<=$page_last_pict) {
     		        $command = $client->getCommand('GetObject', array(
     				    'Bucket' => S3_BUCKET,
-    				    'Key' => $key['Key']
+    				    'Key' => $key
     				));
     				// Generate Signed URL
     				$signedUrl = $command->createPresignedUrl('+1 hours');
     				// Generate Thumbnail
-    				if ($client->doesObjectExist(S3_BUCKET,'thumbs/'.$key['Key'])==false) {
+    				if ($client->doesObjectExist(S3_BUCKET,'thumbs/'.$key)==false) {
     					$thumbnail = new Imagick();
-    					$image = $client->getObject(array('Bucket'=>S3_BUCKET,'Key'=>$key['Key']));
+    					$image = $client->getObject(array('Bucket'=>S3_BUCKET,'Key'=>$key));
     					$thumbnail->readImageBlob($image['Body']);
     					$thumbnail->resizeImage(THUMBS_WIDTH ,0 , imagick::FILTER_UNDEFINED, 1.0);
     					$command = $client->putObject(array(
     						'Bucket' => S3_BUCKET,
-    						'Key' => 'thumbs/'.$key['Key'],
+    						'Key' => 'thumbs/'.$key,
     						'Body' => $thumbnail
     					));
     				}
     		        $command = $client->getCommand('GetObject', array(
     				    'Bucket' => S3_BUCKET,
-    				    'Key' => 'thumbs/'.$key['Key']
+    				    'Key' => 'thumbs/'.$key
     				));
     				// Generate Signed URL
     				$signedUrlThumbs = $command->createPresignedUrl('+1 hours');
-		?>
-          <a href="<?php echo $signedUrl; ?>">
-            <img src="<?php echo $signedUrlThumbs; ?>" width="<?php echo $width ;?>" />
-          </a>
-        <?php }}} ?>
+		?><a
+		    href="<?php echo $signedUrl; ?>"><img src="<?php echo $signedUrlThumbs; ?>" width="<?php echo $width ;?>" /></a
+	    ><?php }}} ?>
         </div><!-- lightGallery -->
+      </div><!-- col-sm-9, col-sm-12-->
+	  </div><!-- row -->
       <!-- </div> starter-template -->
     </div><!-- /.container -->
 

@@ -11,7 +11,7 @@ $width = THUMBS_WIDTH;
 if ($_GET['prefix']!='') {
 	$_SESSION['prefix'] = $_GET['prefix'];
 } else {
-	$_SESSION['prefix'] = DEFAULT_PREFIX;
+	$_SESSION['prefix'] = DEFAULT_PREFIX_VIDEO;
 }
 if (mb_substr($_SESSION['prefix'],-1)!=='/') {
 	$_SESSION['prefix'] .= '/';
@@ -30,14 +30,9 @@ if ($_GET['page']!='') {
 }
 
 $client = createS3Client();
+$keylist = array();
+$commonprefixes = array();
 try {
-    /*
-    $objects = $client->getIterator('ListObjects', array(
-        'Bucket' => S3_BUCKET,
-        'Prefix' => $_SESSION['prefix'],
-        'Delimiter' => '/'
-    ));
-    */
     $objects = $client->ListObjects(array(
         'Bucket' => S3_BUCKET,
         'Prefix' => $_SESSION['prefix'],
@@ -46,13 +41,45 @@ try {
 } catch (S3Exception $e) {
     echo $e->getMessage() . "\n";
 }
+if ($objects['Contents']!==null) {
+    foreach ($objects['Contents'] as $key) {
+        array_push($keylist, $key['Key']);
+    }
+}
+if ($objects['CommonPrefixes']!==null) {
+    foreach ($objects['CommonPrefixes'] as $prefix) {
+        array_push($commonprefixes, $prefix);
+    }
+}
+while ($objects['IsTruncated']==true) {
+    try {
+        $objects = $client->ListObjects(array(
+            'Bucket' => S3_BUCKET,
+            'Prefix' => $_SESSION['prefix'],
+            'Delimiter' => '/',
+            'Marker' => $objects['NextMarker']
+        ));
+        if ($objects['Contents']!==null) {
+            foreach ($objects['Contents'] as $key) {
+                array_push($keylist, $key['Key']);
+            }
+        }
+        if ($objects['CommonPrefixes']!==null) {
+            foreach ($objects['CommonPrefixes'] as $prefix) {
+                array_push($commonprefixes, $prefix);
+            }
+        }
+    } catch (S3Exception $e) {
+        echo $e->getMessage() . "\n";
+    }
+}
 
 $max_pics = 0;
-if ($objects['Contents']!==NULL) {
-    foreach ($objects['Contents'] as $key) {
-    	if (mb_substr($key['Key'], -1) !== '/') {
-    	    if (array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('mp4'))===false) continue;
-    	    $max_pics++;
+if (count($keylist)>0) {
+    foreach ($keylist as $key) {
+    	if (mb_substr($key, -1) !== '/') {
+    	    if (array_search(mb_strtolower(mb_substr($key,-3,3)),array('mp4'))===false) continue;
+		    $max_pics++;
     	}
     }
 }
@@ -107,8 +134,10 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     <!-- A jQuery plugin that adds cross-browser mouse wheel support. (Optional) -->
     <script src="js/jquery.mousewheel.min.js"></script>
     
-<link href="http://vjs.zencdn.net/4.12/video-js.css" rel="stylesheet">
-<script src="http://vjs.zencdn.net/4.12/video.js"></script>
+    <!-- video-js -->
+    <link href="video.js/dist/video-js.min.css" rel="stylesheet">
+    <script src="video.js/dist/video.min.js"></script>
+    
     <!-- lightgallery plugins -->
     <script src="lightGallery/dist/js/lightgallery.min.js"></script>
     <script src="lightGallery/dist/js/lg-thumbnail.min.js"></script>
@@ -123,7 +152,6 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
                 videojs: true
             }); 
 	    });
-
 	</script>
 	
 	<style type="text/css">
@@ -164,8 +192,8 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
       <!-- <div class="starter-template"> -->
 		<?php // show subdirs
 		$pages = array();
-		if ($objects['CommonPrefixes']!==NULL) {
-        	foreach ($objects['CommonPrefixes'] as $prefixes) {
+		if (count($commonprefixes)>0) {
+        	foreach ($commonprefixes as $prefixes) {
         		array_push($pages,$prefixes['Prefix']);
         	}
 		}
@@ -206,42 +234,18 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
         <div id="lightgallery">
         <?php
         $i = 0;
-        if ($objects['Contents']!==NULL) {
-            foreach ($objects['Contents'] as $key) {
-            	if(mb_substr($key['Key'],-1)=='/') continue;
-            	if(array_search(mb_strtolower(mb_substr($key['Key'],-3,3)),array('mp4'))===false) continue;
+        if (count($keylist)>0) {
+            foreach ($keylist as $key) {
+            	if(mb_substr($key,-1)=='/') continue;
+            	if(array_search(mb_strtolower(mb_substr($key,-3,3)),array('mp4'))===false) continue;
             	$i++;
             	if ($i>=$page_first_pict && $i<=$page_last_pict) {
     		        $command = $client->getCommand('GetObject', array(
     				    'Bucket' => S3_BUCKET,
-    				    'Key' => $key['Key']
+    				    'Key' => $key
     				));
     				// Generate Signed URL
     				$signedUrl = $command->createPresignedUrl('+1 hours');
-    				/*
-    				// Generate Thumbnail
-    				if ($client->doesObjectExist(S3_BUCKET,'thumbs/'.$key['Key'])==false) {
-    					$thumbnail = new Imagick();
-    					$image = $client->getObject(array('Bucket'=>S3_BUCKET,'Key'=>$key['Key']));
-    					$thumbnail->readImageBlob($image['Body']);
-    					$thumbnail->resizeImage(THUMBS_WIDTH ,0 , imagick::FILTER_UNDEFINED, 1.0);
-    					$command = $client->putObject(array(
-    						'Bucket' => S3_BUCKET,
-    						'Key' => 'thumbs/'.$key['Key'],
-    						'Body' => $thumbnail
-    					));
-    				}
-    		        $command = $client->getCommand('GetObject', array(
-    				    'Bucket' => S3_BUCKET,
-    				    'Key' => 'thumbs/'.$key['Key']
-    				));
-    				*/
-    		        $command = $client->getCommand('GetObject', array(
-    				    'Bucket' => S3_BUCKET,
-    				    'Key' => 'thumbs/movie.png'
-    				));
-    				// Generate Signed URL
-    				$signedUrlThumbs = $command->createPresignedUrl('+1 hours');
 		?>
           <div style="display:none;" id="video<?php echo $i;?>">
             <video class="lg-video-object lg-html5 video-js vjs-default-skin" controls preload="none">
@@ -251,14 +255,33 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
           </div>
         <?php }}} ?>
           <ul id="video-gallery" style="list-style:none">
-          <?php
-          for ($j=1;$j<$i;$j++) {
-              if ($j>=$page_first_pict && $j<=$page_last_pict) {
+        <?php
+        $i = 0;
+        if (count($keylist)>0) {
+            foreach ($keylist as $key) {
+            	if(mb_substr($key,-1)=='/') continue;
+            	if(array_search(mb_strtolower(mb_substr($key,-3,3)),array('mp4'))===false) continue;
+            	$i++;
+            	if ($i>=$page_first_pict && $i<=$page_last_pict) {
+            	    $thumbkey = 'thumbs/'.mb_substr($key,0,mb_strlen($key)-4).'.jpg';
+            	    if ($client->doesObjectExist(S3_BUCKET,$thumbkey)==false) {
+        		        $command = $client->getCommand('GetObject', array(
+        				    'Bucket' => S3_BUCKET,
+        				    'Key' => 'thumbs/movie.png'
+        				));
+            	    } else {
+        		        $command = $client->getCommand('GetObject', array(
+        				    'Bucket' => S3_BUCKET,
+        				    'Key' => $thumbkey
+        				));
+            	    }
+    				// Generate Signed URL
+    				$signedUrlThumbs = $command->createPresignedUrl('+1 hours');
           ?>
-            <li data-poster="<?php echo $signedUrlThumbs; ?>" data-sub-html="<?php echo $key['Key'];?>" data-html="#video<?php echo $j;?>" style="float:left">
-              <img src="<?php echo $signedUrlThumbs; ?>" />
+            <li data-poster="<?php echo $signedUrlThumbs; ?>" data-sub-html="<?php echo $key;?>" data-html="#video<?php echo $i;?>" style="float:left">
+              <img src="<?php echo $signedUrlThumbs; ?>" width="<?php echo THUMBS_WIDTH;?>" />
             </li>
-          <?php }} ?>
+          <?php }}} ?>
           </ul>
         </div><!-- lightGallery -->
       <!-- </div> starter-template -->
