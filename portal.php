@@ -242,6 +242,7 @@ $page_last_pict = $page_first_pict + $_SESSION['picsnum'] - 1;
     						'Key' => 'thumbs/'.$key,
     						'Body' => $thumbnail
     					));
+    					$thumbnail->clear();
     				}
     		        $command = $client->getCommand('GetObject', array(
     				    'Bucket' => S3_BUCKET,
